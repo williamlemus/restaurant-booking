@@ -21,6 +21,8 @@ model Restaurant {
   id           String        @id @default(uuid())
   name         String
   createdAt    DateTime      @default(now())
+  latitude     String?
+  longitude    String?
   endorsements Endorsement[]
   tables       Table[]
   reservations Reservation[]
@@ -35,16 +37,20 @@ model Endorsement {
 }
 
 model Table {
-  id           String     @id @default(uuid())
+  id           String        @id @default(uuid())
   capacity     Int
-  Restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  Restaurant   Restaurant    @relation(fields: [restaurantId], references: [id])
   restaurantId String
+  Reservation  Reservation[]
 }
 
 model Reservation {
   id           String     @id @default(uuid())
   startTime    DateTime   @default(now())
+  endTime      DateTime
+  table        Table      @relation(fields: [tableId], references: [id])
   users        User[]
   Restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
   restaurantId String
+  tableId      String
 }

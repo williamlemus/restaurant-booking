@@ -24,21 +24,33 @@ const endorsementData: Prisma.EndorsementCreateInput[] = [
 const restaurantData: Prisma.RestaurantCreateInput[] = [
   {
     name: "Lardo",
+    latitude: "19.4153107",
+    longitude: "-99.1804722",
   },
   {
     name: "Panadería Rosetta",
+    latitude: "19.4153107",
+    longitude: "-99.1804722",
   },
   {
     name: "Tetetlán",
+    latitude: "19.4153107",
+    longitude: "-99.1804722",
   },
   {
     name: "Falling Piano Brewing Co",
+    latitude: "19.4153107",
+    longitude: "-99.1804722",
   },
   {
     name: "u.to.pi.a",
+    latitude: "19.4153107",
+    longitude: "-99.1804722",
   },
   {
     name: "Bluth's Original Frozen Banana Stand",
+    latitude: "19.4153107",
+    longitude: "-99.1804722",
   },
 ];
 
@@ -87,7 +99,7 @@ const userRestrictions: { [key: string]: string } = {
   Gob: "Paleo",
 };
 
-const restaurantEndorsemets: {[key: string]: string} = {
+const restaurantEndorsements: {[key: string]: string} = {
   Lardo: "Gluten-Free Options",
 };
 
@@ -120,7 +132,7 @@ async function main() {
   for (const r of restaurantData) {
     const endorsement =
       endorsements.find(
-        (el) => el.endorsement_name === restaurantEndorsemets[r.name]
+        (el) => el.endorsement_name === restaurantEndorsements[r.name]
       ) || undefined;
     const payload = r;
     if (endorsement) {
