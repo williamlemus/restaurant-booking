@@ -35,7 +35,7 @@ app.post(`/reservation`, async (req, res, next) => {
       .flat();
     const endorsements = (
       await prisma.endorsement.findMany({
-        where: { id: restaurant_id },
+        where: { restaurants: {some:  { id: restaurant_id } }  },
         select: { id: true },
       })
     ).map((elem) => elem.id);
@@ -95,7 +95,6 @@ app.post(`/reservation`, async (req, res, next) => {
     }
 
     const tableId = freeTables[0].id;
-    console.log(user_ids.map((user_id: string) => ({ id: user_id })));
     const result = await prisma.reservation.create({
       data: {
         restaurantId: restaurant_id as string,
@@ -201,7 +200,6 @@ app.get(
         },
       },
     });
-    // for now, filter table here
     res.json(
       availableRestaurants.map((restaurant) => ({
         ...restaurant,
@@ -230,7 +228,7 @@ app.delete(`/reservation/:id`, async (req, res) => {
       },
     })
   ) {
-    // also delete the reservation guests, i think the implicit many-to-many handles that
+    // Prisma's implicit many-to-many handles deleting the guest reservations
     reservation = await prisma.reservation.delete({
       where: {
         id,
