@@ -1,45 +1,15 @@
-import { PrismaClient, Reservation } from "@prisma/client";
+import { Reservation } from "@prisma/client";
+import prisma from "./lib/prisma";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import express, { NextFunction, Request, Response } from "express";
+import { CustomError } from "./lib/customError";
+import { calculateTimeRange } from "./lib/utils";
+import { RESERVATION_LENGTH_IN_HOURS } from "./lib/constants";
 
-const prisma = new PrismaClient();
-const app = express();
+export const app = express();
 
 app.use(express.json());
-const RESERVATION_LENGTH_IN_HOURS = 2;
 
-class CustomError extends Error {
-  public statusCode: number;
-  public message: string;
-  constructor(status: number, message: string) {
-    super(message);
-    Object.setPrototypeOf(this, CustomError.prototype);
-    this.statusCode = status;
-    this.message = message;
-  }
-}
-
-const calculateTimeRange = (
-  time: Date,
-  offset = RESERVATION_LENGTH_IN_HOURS
-) => {
-  return [
-    new Date(
-      time.getFullYear(),
-      time.getMonth(),
-      time.getDate(),
-      time.getHours() - offset,
-      time.getMinutes()
-    ),
-    new Date(
-      time.getFullYear(),
-      time.getMonth(),
-      time.getDate(),
-      time.getHours() + offset,
-      time.getMinutes()
-    ),
-  ];
-};
 
 app.post(`/reservation`, async (req, res, next) => {
   const { user_ids, time, restaurant_id } = req.body;
@@ -266,8 +236,9 @@ app.delete(`/reservation/:id`, async (req, res) => {
         id,
       },
     });
+    return res.json(reservation);
   }
-  res.json(reservation);
+  res.status(404).json('Reservation not found!')
 });
 
 // middleware that will match(and 404) if user tries to go to random route
@@ -281,8 +252,6 @@ app.use("/", (req, res, next) => {
 
 // catch all error handler
 app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
-  console.log(err);
-  console.log(err instanceof Error);
   if (err instanceof CustomError) {
     const { message, statusCode = 500 } = err;
     res.status(statusCode).send({
@@ -293,7 +262,3 @@ app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
     res.status(500).send({ message: "Unknown Error" });
   }
 });
-const server = app.listen(3000, () =>
-  console.log(`
-🚀 Server ready at: http://localhost:3000 `)
-);

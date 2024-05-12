@@ -1,0 +1,1 @@
+export const RESERVATION_LENGTH_IN_HOURS = 2;
