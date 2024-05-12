@@ -99,13 +99,36 @@ const userRestrictions: { [key: string]: string } = {
   Gob: "Paleo",
 };
 
-const restaurantEndorsements: {[key: string]: string} = {
-  Lardo: "Gluten-Free Options",
+const restaurantEndorsements: { [key: string]: string[] } = {
+  Lardo: ["Gluten-Free Options", "Vegetarian-Friendly"],
+  "Bluth's Original Frozen Banana Stand": [
+    "Gluten-Free Options",
+    "Vegetarian-Friendly",
+    "Vegan-Friendly",
+  ],
+};
+
+const restaurantTables: { [key: string]: { capacity: number }[] } = {
+  Lardo: [
+    {
+      capacity: 4,
+    },
+    { capacity: 2 },
+    { capacity: 6 },
+  ],
 };
 
 async function main() {
+  // move this type guard somewhere else
+  function isDefined<T>(argument: T | undefined): argument is T {
+    return argument !== undefined;
+  }
   console.log(`Start seeding ...`);
-  const endorsements = [];
+  const endorsements: {
+    id: string;
+    endorsement_name: string;
+    restriction_name: string;
+  }[] = [];
   for (const e of endorsementData) {
     const endorsement = await prisma.endorsement.create({
       data: e,
@@ -128,15 +151,22 @@ async function main() {
 
     console.log(`Created user with id: ${user.id}`);
   }
-  
+
   for (const r of restaurantData) {
-    const endorsement =
-      endorsements.find(
-        (el) => el.endorsement_name === restaurantEndorsements[r.name]
-      ) || undefined;
+    const endorsementsData = (restaurantEndorsements[r.name] || [])
+      .map((e) => endorsements.find((el) => el.endorsement_name === e))
+      .filter(isDefined);
+
     const payload = r;
-    if (endorsement) {
-      payload.endorsements = { connect: [{ id: endorsement.id }] };
+    if (endorsements) {
+      payload.endorsements = {
+        connect: endorsementsData.map((endorsement) => ({
+          id: endorsement.id,
+        })),
+      };
+    }
+    if (restaurantTables[r.name]) {
+      payload.tables = { create: restaurantTables[r.name] };
     }
     const restaurant = await prisma.restaurant.create({
       data: payload,
