@@ -5,12 +5,15 @@ import express, { NextFunction, Request, Response } from "express";
 import { CustomError } from "./lib/customError";
 import { calculateTimeRange } from "./lib/utils";
 import { RESERVATION_LENGTH_IN_HOURS } from "./lib/constants";
+import { validate } from "./lib/middlewares";
+import { SearchSchema } from "./lib/schema/search.schema";
+import { CreateReservationSchema, DeleteReservationSchema } from "./lib/schema/reservation.schema";
 
 export const app = express();
 
 app.use(express.json());
 
-app.post(`/reservation`, async (req, res, next) => {
+app.post(`/reservation`, validate(CreateReservationSchema), async (req, res, next) => {
   const { user_ids, time, restaurant_id } = req.body;
 
   const startTime = new Date(time);
@@ -134,8 +137,8 @@ app.post(`/reservation`, async (req, res, next) => {
 });
 
 app.get(
-  "/reservation/search",
-  async (req: Request<{ user_ids: string[]; time: string }>, res) => {
+  "/reservation/search", validate(SearchSchema),
+    async (req: Request, res) => {
     const { user_ids = [], time } = req.query;
     const startTime = typeof time === "string" ? new Date(time) : new Date();
     // don't send anything if date is in the past
@@ -223,7 +226,7 @@ app.get(
   }
 );
 
-app.delete(`/reservation/:id`, async (req, res) => {
+app.delete(`/reservation/:id`, validate(DeleteReservationSchema), async (req: Request, res) => {
   const { id } = req.params;
   const { user_id } = req.body;
   let reservation: Reservation | Record<never, object> = {};
