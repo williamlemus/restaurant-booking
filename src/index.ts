@@ -10,11 +10,15 @@ export const app = express();
 
 app.use(express.json());
 
-
 app.post(`/reservation`, async (req, res, next) => {
   const { user_ids, time, restaurant_id } = req.body;
 
   const startTime = new Date(time);
+  if (new Date() > startTime) {
+    return res
+      .status(400)
+      .send({ message: "Cannot make reservation in the past!" });
+  }
   try {
     // add validations/errors for each field
     const users = await prisma.user.findMany({
@@ -35,7 +39,7 @@ app.post(`/reservation`, async (req, res, next) => {
       .flat();
     const endorsements = (
       await prisma.endorsement.findMany({
-        where: { restaurants: {some:  { id: restaurant_id } }  },
+        where: { restaurants: { some: { id: restaurant_id } } },
         select: { id: true },
       })
     ).map((elem) => elem.id);
@@ -44,7 +48,11 @@ app.post(`/reservation`, async (req, res, next) => {
         endorsements.includes(restriction)
       )
     ) {
-      return res.json("Restaurant does not accomodate dietary preferences");
+      return res
+        .status(401)
+        .json({
+          message: "Restaurant does not accomodate dietary preferences",
+        });
     }
 
     // Check no one has taken up the time
@@ -74,7 +82,9 @@ app.post(`/reservation`, async (req, res, next) => {
     });
     // if one of them has a reservation, do not let them book!
     if (userReservations.length > 0) {
-      return res.json("Someone in your party already has a reservation!");
+      return res.json({
+        message: "Someone in your party already has a reservation!",
+      });
     }
     // get free tables(tables not in the above reservations that have capacity gte user_ids)
     const freeTables = await prisma.table.findMany({
@@ -91,7 +101,9 @@ app.post(`/reservation`, async (req, res, next) => {
     });
 
     if (freeTables.length === 0) {
-      return res.json("No tables are available! Please try another time");
+      return res.json({
+        message: "No tables are available! Please try another time",
+      });
     }
 
     const tableId = freeTables[0].id;
@@ -215,7 +227,6 @@ app.delete(`/reservation/:id`, async (req, res) => {
   const { id } = req.params;
   const { user_id } = req.body;
   let reservation: Reservation | Record<never, object> = {};
-  // check that user is part of reservation before deleting
   if (
     await prisma.reservation.findFirst({
       where: {
@@ -236,7 +247,7 @@ app.delete(`/reservation/:id`, async (req, res) => {
     });
     return res.json(reservation);
   }
-  res.status(404).json('Reservation not found!')
+  res.status(404).json({ message: "Reservation not found!" });
 });
 
 // middleware that will match(and 404) if user tries to go to random route
