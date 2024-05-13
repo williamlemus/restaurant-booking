@@ -23,11 +23,10 @@ app.post(`/reservation`, validate(CreateReservationSchema), async (req, res, nex
       .send({ message: "Cannot make reservation in the past!" });
   }
   try {
-    // add validations/errors for each field
     const users = await prisma.user.findMany({
       where: {
         id: {
-          in: user_ids as string[],
+          in: user_ids,
         },
       },
       select: {
@@ -37,6 +36,9 @@ app.post(`/reservation`, validate(CreateReservationSchema), async (req, res, nex
         },
       },
     });
+    if(users.length !== user_ids.length){
+      return res.status(400).json({message: "Some users in your party do not have an account!"});
+    }
     const restriction_ids = users
       .map((user) => user.restrictions.map((restriction) => restriction.id))
       .flat();
@@ -78,7 +80,7 @@ app.post(`/reservation`, validate(CreateReservationSchema), async (req, res, nex
         restaurantId: restaurant_id,
         users: {
           some: {
-            id: { in: user_ids as string[] },
+            id: { in: user_ids },
           },
         },
       },
@@ -98,7 +100,7 @@ app.post(`/reservation`, validate(CreateReservationSchema), async (req, res, nex
           },
         },
         capacity: {
-          gte: user_ids.length as number,
+          gte: user_ids.length,
         },
       },
     });
@@ -112,7 +114,7 @@ app.post(`/reservation`, validate(CreateReservationSchema), async (req, res, nex
     const tableId = freeTables[0].id;
     const result = await prisma.reservation.create({
       data: {
-        restaurantId: restaurant_id as string,
+        restaurantId: restaurant_id,
         users: {
           connect: user_ids.map((user_id: string) => ({ id: user_id })),
         },
@@ -138,7 +140,7 @@ app.post(`/reservation`, validate(CreateReservationSchema), async (req, res, nex
 
 app.get(
   "/reservation/search", validate(SearchSchema),
-    async (req: Request, res) => {
+    async (req, res) => {
     const { user_ids = [], time } = req.query;
     const startTime = typeof time === "string" ? new Date(time) : new Date();
     // don't send anything if date is in the past
@@ -236,7 +238,7 @@ app.delete(`/reservation/:id`, validate(DeleteReservationSchema), async (req: Re
         id,
         users: {
           some: {
-            id: user_id as string,
+            id: user_id,
           },
         },
       },
