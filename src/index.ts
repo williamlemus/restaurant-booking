@@ -37,7 +37,7 @@ app.post(`/reservation`, validate(CreateReservationSchema), async (req, res, nex
       },
     });
     if(users.length !== user_ids.length){
-      return res.status(400).json({message: "Some users in your party do not have an account!"});
+      return res.status(400).json({message: "Some of the people in your party do not have an account!"});
     }
     const restriction_ids = users
       .map((user) => user.restrictions.map((restriction) => restriction.id))
@@ -77,7 +77,6 @@ app.post(`/reservation`, validate(CreateReservationSchema), async (req, res, nex
           gt: lowerBound,
           lte: upperBound,
         },
-        restaurantId: restaurant_id,
         users: {
           some: {
             id: { in: user_ids },

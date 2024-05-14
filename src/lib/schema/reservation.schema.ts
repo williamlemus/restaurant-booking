@@ -4,7 +4,7 @@ import { z } from "zod";
 export const CreateReservationSchema = z.object({
   body: z.object({
     user_ids: z.string().array(),
-    time: z.date(),
+    time: z.string().transform(value => new Date(value)),
     restaurant_id: z.string(),
   }),
 });

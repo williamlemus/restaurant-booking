@@ -4,79 +4,12 @@ import { prismaMock } from "../__mocks__/prisma";
 import { Prisma, Reservation, User } from "@prisma/client";
 
 describe("index", () => {
-  it("should return when searching with no params", async () => {
-    // search without anything returns all available tables at current time
-    const reservations: Reservation[] = [];
-
-    const restaurants = [
-      {
-        id: "ce161c58-2ff3-4d12-9cad-c304182501bb",
-        name: "Lardo",
-        createdAt: new Date("2024-05-09T15:46:32.287Z"),
-        latitude: "19.4153107",
-        longitude: "-99.1804722",
-        tables: [
-          {
-            id: "d3b9eb4f-f659-49fe-9575-ac3638ed7762",
-            capacity: 4,
-            restaurantId: "ce161c58-2ff3-4d12-9cad-c304182501bb",
-          },
-          {
-            id: "7421ad21-a5c3-48d7-9cb6-edcc1cc8da44",
-            capacity: 6,
-            restaurantId: "ce161c58-2ff3-4d12-9cad-c304182501bb",
-          },
-        ],
-        endorsements: [
-          {
-            id: "817691f0-c6fe-41fa-8150-4935a36f5b70",
-            endorsement_name: "Vegetarian-Friendly",
-            restriction_name: "Vegetarian",
-          },
-        ],
-      },
-    ];
-    prismaMock.reservation.findMany.mockResolvedValue(reservations);
-    prismaMock.endorsement.findMany.mockResolvedValue([
-      {
-        id: "817691f0-c6fe-41fa-8150-4935a36f5b70",
-        endorsement_name: "Vegetarian-Friendly",
-        restriction_name: "Vegetarian",
-      },
-    ]);
-    prismaMock.restaurant.findMany.mockResolvedValue(restaurants);
+  it("should return error message searching with no params", async () => {
+    // search without anything returns error as
     const response = await request(app).get("/reservation/search");
 
-    // expect(prismaMock.user.create).toHaveBeenCalledWith([5]);
-    expect(response.status).toEqual(200);
-    expect(response.body).toEqual([
-      {
-        createdAt: "2024-05-09T15:46:32.287Z",
-        id: "ce161c58-2ff3-4d12-9cad-c304182501bb",
-        latitude: "19.4153107",
-        longitude: "-99.1804722",
-        name: "Lardo",
-        tables: [
-          {
-            capacity: 4,
-            id: "d3b9eb4f-f659-49fe-9575-ac3638ed7762",
-            restaurantId: "ce161c58-2ff3-4d12-9cad-c304182501bb",
-          },
-          {
-            capacity: 6,
-            id: "7421ad21-a5c3-48d7-9cb6-edcc1cc8da44",
-            restaurantId: "ce161c58-2ff3-4d12-9cad-c304182501bb",
-          },
-        ],
-        endorsements: [
-          {
-            id: "817691f0-c6fe-41fa-8150-4935a36f5b70",
-            endorsement_name: "Vegetarian-Friendly",
-            restriction_name: "Vegetarian",
-          },
-        ],
-      },
-    ]);
+    expect(response.status).toEqual(400);
+    expect(response.body.message).toEqual("Invalid or missing inputs provided for: user_ids, time");
   });
 
   describe("delete reservation", () => {
@@ -93,7 +26,7 @@ describe("index", () => {
       prismaMock.reservation.findFirst.mockResolvedValue(reservation);
       const response = await request(app).delete(
         "/reservation/e52bfd99-3bb4-4ff5-bf4b-f267175b5a51"
-      );
+      ).send({user_id: "05600976-2ff3-4bcb-b321-bc55e36d88f5"});
       expect(response.status).toEqual(200);
       expect(response.body).toEqual({
         id: "e52bfd99-3bb4-4ff5-bf4b-f267175b5a51",
@@ -104,7 +37,7 @@ describe("index", () => {
       });
     });
     it("should return 404 for invalid reservation", (done) => {
-      request(app).delete("/reservation/5").expect(404, done);
+      request(app).delete("/reservation/5").send({ user_id: '05600976-2ff3-4bcb-b321-bc55e36d88f5'}).expect(404, done);
     });
   });
 
@@ -124,13 +57,13 @@ describe("index", () => {
 
     it("should not allow reservations with unmatching endorsements", async () => {
       const body = {
-        user_ids: ["05600976-2ff3-4bcb-b321-bc55e36d88f5"],
+        user_ids: ["05600976-2ff3-4bcb-b321-bc55e36d88f5", "f841d16c-d121-4ca3-a9de-1355cedd1369"],
         time: new Date(Date.now() + 3000000),
         restaurant_id: "ce161c58-2ff3-4d12-9cad-c304182501bb",
       };
       const users = [
         {
-          id: "",
+          id: "05600976-2ff3-4bcb-b321-bc55e36d88f5",
           name: "Jim",
           restrictions: [{ id: "dc4e1d4b-d0b5-40e5-a6f5-171792471f59" }],
           email: "Jim@jim.com",
@@ -138,7 +71,7 @@ describe("index", () => {
           longitude: "-45.098654",
         },
         {
-          id: "",
+          id: "f841d16c-d121-4ca3-a9de-1355cedd1369",
           name: "John",
           restrictions: [],
           email: "John@john.com",
@@ -164,14 +97,14 @@ describe("index", () => {
 
     it("should not allow overlapping reservations", async () => {
       const body = {
-        user_ids: ["05600976-2ff3-4bcb-b321-bc55e36d88f5"],
+        user_ids: ["05600976-2ff3-4bcb-b321-bc55e36d88f5", "f841d16c-d121-4ca3-a9de-1355cedd1369"],
         time: new Date(Date.now() + 3000000),
         restaurant_id: "ce161c58-2ff3-4d12-9cad-c304182501bb",
       };
       // mock user response with restrictions
       const users = [
         {
-          id: "",
+          id: "05600976-2ff3-4bcb-b321-bc55e36d88f5",
           name: "Jim",
           restrictions: [{ id: "817691f0-c6fe-41fa-8150-4935a36f5b70" }],
           email: "Jim@jim.com",
@@ -179,7 +112,7 @@ describe("index", () => {
           longitude: "-45.098654",
         },
         {
-          id: "",
+          id: "f841d16c-d121-4ca3-a9de-1355cedd1369",
           name: "John",
           restrictions: [],
           email: "John@john.com",
@@ -215,14 +148,14 @@ describe("index", () => {
 
     it("should not allow reserving if no tables available", async () => {
       const body = {
-        user_ids: ["05600976-2ff3-4bcb-b321-bc55e36d88f5"],
+        user_ids: ["05600976-2ff3-4bcb-b321-bc55e36d88f5", "f841d16c-d121-4ca3-a9de-1355cedd1369"],
         time: new Date(Date.now() + 3000000),
         restaurant_id: "ce161c58-2ff3-4d12-9cad-c304182501bb",
       };
       // mock user response with restrictions
       const users = [
         {
-          id: "",
+          id: "05600976-2ff3-4bcb-b321-bc55e36d88f5",
           name: "Jim",
           restrictions: [{ id: "817691f0-c6fe-41fa-8150-4935a36f5b70" }],
           email: "Jim@jim.com",
@@ -230,7 +163,7 @@ describe("index", () => {
           longitude: "-45.098654",
         },
         {
-          id: "",
+          id: "f841d16c-d121-4ca3-a9de-1355cedd1369",
           name: "John",
           restrictions: [],
           email: "John@john.com",
@@ -255,18 +188,52 @@ describe("index", () => {
       );
     });
 
+    it("should not allow reserving if no there's an unknown user", async () => {
+        const body = {
+          user_ids: ["05600976-2ff3-4bcb-b321-bc55e36d88f5", "f841d16c-d121-4ca3-a9de-1355cedd1369"],
+          time: new Date(Date.now() + 3000000),
+          restaurant_id: "ce161c58-2ff3-4d12-9cad-c304182501bb",
+        };
+        // mock user response with restrictions
+        const users = [
+          {
+            id: "05600976-2ff3-4bcb-b321-bc55e36d88f5",
+            name: "Jim",
+            restrictions: [{ id: "817691f0-c6fe-41fa-8150-4935a36f5b70" }],
+            email: "Jim@jim.com",
+            latitude: "19.09486",
+            longitude: "-45.098654",
+          },
+        ];
+        prismaMock.user.findMany.mockResolvedValue(users);
+        prismaMock.endorsement.findMany.mockResolvedValue([
+          {
+            id: "817691f0-c6fe-41fa-8150-4935a36f5b70",
+            endorsement_name: "Vegetarian-Friendly",
+            restriction_name: "Vegetarian",
+          },
+        ]);
+        prismaMock.reservation.findMany.mockResolvedValue([]);
+        prismaMock.table.findMany.mockResolvedValue([]);
+        const response = await request(app).post("/reservation").send(body);
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe(
+          "Some of the people in your party do not have an account!"
+        );
+      });
+
     it("should reserve table successfully", async () => {
       const time = new Date(Date.now() + 3000000);
       const endTime = new Date(time.getTime() + 3_600_000);
       const body = {
-        user_ids: ["05600976-2ff3-4bcb-b321-bc55e36d88f5"],
+        user_ids: ["05600976-2ff3-4bcb-b321-bc55e36d88f5", "f841d16c-d121-4ca3-a9de-1355cedd1369"],
         time,
         restaurant_id: "ce161c58-2ff3-4d12-9cad-c304182501bb",
       };
       // mock user response with restrictions
       const users = [
         {
-          id: "",
+          id: "05600976-2ff3-4bcb-b321-bc55e36d88f5",
           name: "Jim",
           restrictions: [{ id: "817691f0-c6fe-41fa-8150-4935a36f5b70" }],
           email: "Jim@jim.com",
@@ -274,7 +241,7 @@ describe("index", () => {
           longitude: "-45.098654",
         },
         {
-          id: "",
+          id: "f841d16c-d121-4ca3-a9de-1355cedd1369",
           name: "John",
           restrictions: [],
           email: "John@john.com",
